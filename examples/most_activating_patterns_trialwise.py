@@ -446,3 +446,18 @@ mne.viz.plot_evoked_topo(evokeds)
 
 
 activations_epochs.info
+
+
+#another MNE version of the plot, just smth is wrong with smoothing
+from mne.viz import iter_topography
+
+for ax, idx in iter_topography(dataset.datasets[0].raw.info,
+                               fig_facecolor='white',
+                               axis_facecolor='white',
+                               axis_spinecolor='white'):
+    ax.plot(np.mean(all_most_activating_windows, axis = 0)[idx], color='blue')
+    ax.set_title(ch_names[idx])
+    plt.grid(True)
+
+plt.gcf().suptitle('Activation Windows')
+plt.show()
