@@ -148,11 +148,7 @@ train_set = splitted['session_T']
 valid_set = splitted['session_E']
 
 ###################################################################
-# Now we create the model. To enable it to be used in cropped decoding
-# efficiently, we manually set the length of the final convolution layer
-# to some length that makes the receptive field of the ConvNet smaller
-# than ``input_window_samples`` (see ``final_conv_length=30`` in the model
-# definition).
+# Creating a model
 
 
 import torch
