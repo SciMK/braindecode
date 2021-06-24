@@ -65,16 +65,14 @@ Most Activating Input Patterns
 #
 
 
+
+
+
 ######################################################################
 # Loading and preprocessing the dataset
 # -------------------------------------
 #
 
-
-######################################################################
-# Loading and preprocessing stays the same as in the `Trialwise decoding
-# tutorial <./plot_bcic_iv_2a_moabb_trial.html>`__.
-#
 import mne
 
 from braindecode.datasets.moabb import MOABBDataset
@@ -127,20 +125,11 @@ windows_dataset = create_windows_from_events(
 )
 
 
+
 ######################################################################
-# In contrast to trialwise decoding, we first have to create the model
-# before we can cut the dataset into windows. This is because we need to
-# know the receptive field of the network to know how large the window
-# stride should be.
+# Splitting the data into training and validation set
 #
-
-
-######################################################################
-# We first choose the compute/input window size that will be fed to the
-# network during training This has to be larger than the networks
-# receptive field size and can otherwise be chosen for computational
-# efficiency (see explanations in the beginning of this tutorial). Here we
-# choose 1000 samples, which are 4 seconds for the 250 Hz sampling rate.
+#
 #
 
 splitted = windows_dataset.split('session')
@@ -182,38 +171,11 @@ if cuda:
 
 
 
+
 ######################################################################
-# And now we transform model with strides to a model that outputs dense
-# prediction, so we can use it to obtain predictions for all
-# crops.
+#  Training the model
 #
-
-######################################################################
-# To know the models’ receptive field, we calculate the shape of model
-# output for a dummy input.
 #
-
-
-######################################################################
-# Training
-# --------
-#
-
-
-######################################################################
-# In difference to trialwise decoding, we now should supply
-# ``cropped=True`` to the EEGClassifier, and ``CroppedLoss`` as the
-# criterion, as well as ``criterion__loss_function`` as the loss function
-# applied to the meaned predictions.
-#
-
-
-######################################################################
-# .. note::
-#    In this tutorial, we use some default parameters that we
-#    have found to work well for motor decoding, however we strongly
-#    encourage you to perform your own hyperparameter optimization using
-#    cross validation on your training data.
 #
 from skorch.callbacks import LRScheduler
 from skorch.helper import predefined_split
@@ -228,7 +190,7 @@ lr = 1 * 0.01
 weight_decay = 0.5 * 0.001
 
 batch_size = 64
-n_epochs = 100
+n_epochs = 100   #this we should change to 8 epochs afterwards
 
 clf = EEGClassifier(
     model,
@@ -252,12 +214,7 @@ clf.fit(train_set, y=None, epochs=n_epochs)
 
 
 ######################################################################
-# We first choose the compute/input window size that will be fed to the
-# network during training This has to be larger than the networks
-# receptive field size and can otherwise be chosen for computational
-# efficiency (see explanations in the beginning of this tutorial). Here we
-# choose 1000 samples, which are 4 seconds for the 250 Hz sampling rate.
-#
+# getting the model
 
 model = clf.module
 
@@ -273,7 +230,7 @@ for name, module in model.named_children():
     submodel.add_module(name, module)
     if name == wanted_layer:
         break
-submodel
+print(submodel)
 
 
 ######################################################################
@@ -291,6 +248,8 @@ trainloader = torch.utils.data.DataLoader(
 # Here we do on train set
 # In future, should improve braindecode to have function
 # Get non-overlapping activations (train_set) (but is that possible? maybe just assume defaults)
+#here I chould add check for device!
+
 all_X = []
 all_acts = []
 with torch.no_grad():
@@ -310,6 +269,7 @@ print(all_acts.shape)  #(384*50*962*1)
 ######################################################################
 # calculate how many input samples the network needs to produce one
 #activation (receptive field size)
+#formula for cropped case is incorrect here, just hardcoded the RF size for now
 #
 n_receptive_field = all_X.shape[2] - all_acts.shape[2] + 1
 n_receptive_field = 39
@@ -340,7 +300,8 @@ for i_batch, i_act in i_acts_sorted[-n_fields_to_collect:]:
     print(np.shape(X_part), i_start, i_stop)
     all_most_activating_windows.append(X_part)
 all_most_activating_windows = np.array(all_most_activating_windows, dtype = object)
-#y = np.array([np.array(xi) for xi in all_most_activating_windows])
+
+
 #lowest absolute activation
 
 
@@ -355,10 +316,13 @@ unit_acts[i_acts_sorted[-1][0], i_acts_sorted[-1][1]]
 #
 import numpy as np
 import matplotlib as mpl
-mpl.use("module://backend_interagg")
+mpl.use("module://backend_interagg") #this is necessary to display plots in SciView in Pycharm
 import matplotlib.pyplot as plt
-import matplotlib
 
+
+######################################################################
+# Let's plot sorted activations in different colors
+#
 
 acts_sorted = np.array([unit_acts[i_b,i_t] for i_b,i_t in i_acts_sorted])
 plt.plot(acts_sorted[acts_sorted>0], '.', color = 'red', label = 'positive');
@@ -467,6 +431,8 @@ def plot_head_signals_tight(signals, sensor_names=None, figsize=(12, 7),
 fig = plot_head_signals_tight(np.median(all_most_activating_windows, axis=0),
                        sensor_names=ch_names, figsize=(16,16))
 
+
+#here i am trying to plot the tight-layout with MNE function...
 
 n_channels = 22
 sampling_freq = 250.
